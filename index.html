@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Weight Management</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weight Management">
+<meta name="theme-color" content="#141210">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+
+<style>
+  :root {
+    --bg: #141210; --card: #1c1a16; --border: #2e2b26; --border-input: #35322b;
+    --text: #e8e4dc; --muted: #8a8478; --accent: #c98a4b;
+    --green: #7ba888; --green-bg: #1e2b24; --green-border: #2e3d34; --red: #c9724b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body { padding: max(24px, env(safe-area-inset-top)) 16px max(48px, env(safe-area-inset-bottom)); }
+  .container { max-width: 520px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .header-icon {
+    width: 42px; height: 42px; border-radius: 11px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  h1 { color: var(--text); font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+
+  .backup-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .backup-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--card); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 9px; padding: 9px 0; font-size: 12px; font-weight: 500; cursor: pointer;
+  }
+  .backup-btn svg { flex-shrink: 0; }
+
+  .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .summary-icon { color: var(--accent); margin-bottom: 2px; }
+  .summary-label { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-value-row { display: flex; align-items: baseline; gap: 3px; }
+  .summary-value { color: var(--text); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .summary-unit { color: var(--muted); font-size: 11px; }
+  .delta-tag { display: flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; margin-top: 2px; }
+
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px 10px; margin-bottom: 16px; }
+  .chart-header { color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 8px; margin-left: 4px; }
+  .metric-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; margin-left: 2px; }
+  .metric-tab {
+    background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px; font-size: 11px; font-weight: 500; cursor: pointer;
+  }
+  .metric-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .metric-tab.disabled { opacity: 0.35; cursor: default; }
+  svg text { font-family: -apple-system, sans-serif; }
+
+  .import-btn {
+    display: flex; align-items: center; justify-content: center; width: 100%;
+    background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border);
+    border-radius: 10px; padding: 11px 0; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 16px;
+  }
+  .success-text { color: var(--green); font-size: 12.5px; margin-bottom: 16px; text-align: center; }
+  .error-banner { color: var(--red); font-size: 12.5px; margin-bottom: 16px; text-align: center; }
+
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .form-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .form-header { color: var(--text); font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .cancel-edit-btn { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; margin-bottom: 12px; text-decoration: underline; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .field-wrap { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; min-width: 0; }
+  .field-label { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+  input {
+    background: var(--bg); border: 1px solid var(--border-input); border-radius: 8px;
+    padding: 9px 10px; color: var(--text); font-size: 16px; outline: none;
+    box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+  }
+  input::placeholder { color: #5a564c; }
+  .error-text { color: var(--red); font-size: 12.5px; margin-bottom: 8px; }
+  .submit-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+    background: var(--accent); color: var(--bg); border: none; border-radius: 8px;
+    padding: 12px 0; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px;
+  }
+  .submit-btn:active { opacity: 0.85; }
+
+  .history-section { margin-bottom: 8px; }
+  .empty-state { color: #6b6659; font-size: 13px; padding: 20px 0; text-align: center; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-row { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; position: relative; cursor: pointer; }
+  .history-date { color: var(--accent); font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
+  .history-stats { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .history-stat { color: var(--text); font-size: 14px; font-weight: 600; }
+  .history-stat-muted { color: var(--muted); font-size: 12px; }
+  .history-dose { color: var(--green); font-size: 11.5px; font-weight: 500; background: var(--green-bg); padding: 2px 7px; border-radius: 5px; }
+  .history-notes { color: var(--muted); font-size: 12px; margin-top: 5px; font-style: italic; }
+  .delete-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #5a564c; cursor: pointer; padding: 6px; font-size: 13px; line-height: 1; }
+
+  .footer-note { color: #524e44; font-size: 10.5px; text-align: center; margin-top: 24px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M4 7 L9 11 L14 9.5 L19 16" stroke="#141210" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="19" cy="16" r="2.4" fill="#141210"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Weight Management</h1>
+      <p class="subtitle">Weekly tracking &middot; goal <span id="goalWeight">180</span> lb</p>
+    </div>
+  </header>
+
+  <div class="backup-row">
+    <button class="backup-btn" id="exportBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      Export backup
+    </button>
+    <button class="backup-btn" id="importDataBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 3h14"/></svg>
+      Restore backup
+    </button>
+    <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
+  </div>
+  <div class="success-text" id="backupSuccess" style="display:none;"></div>
+  <div class="error-banner" id="backupError" style="display:none;"></div>
+
+  <div class="summary-row" id="summaryRow"></div>
+
+  <div class="chart-card" id="chartCard" style="display:none;">
+    <div class="chart-header" id="chartHeader">Weight trend</div>
+    <div class="metric-tabs" id="metricTabs"></div>
+    <div id="chartWrap"></div>
+  </div>
+
+  <button class="import-btn" id="importBtn" style="display:none;"></button>
+  <div class="success-text" id="importSuccess" style="display:none;">Calendar history imported.</div>
+
+  <div class="form-card">
+    <div class="form-header-row">
+      <div class="form-header" id="formHeaderText">Log this week</div>
+      <button class="cancel-edit-btn" id="cancelEditBtn" style="display:none;">Cancel</button>
+    </div>
+    <div class="form-grid">
+      <div class="field-wrap">
+        <span class="field-label">Date</span>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Weight (lb)</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Enter weight" id="fWeight">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Body fat %</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fBodyFat">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">BMI</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fBmi">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Muscle %</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fMuscle">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Bone %</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fBone">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Water %</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fWater">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Avg steps/day</span>
+        <input type="number" inputmode="numeric" step="1" placeholder="Optional" id="fAvgSteps">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Avg exercise min/day</span>
+        <input type="number" inputmode="numeric" step="1" placeholder="Optional" id="fAvgExercise">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Avg resting HR</span>
+        <input type="number" inputmode="numeric" step="1" placeholder="Optional" id="fAvgRestingHR">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">VO2 Max</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fVo2max">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Dose (mg)</span>
+        <input type="number" inputmode="decimal" step="0.5" placeholder="e.g. 7.5" id="fDose">
+      </div>
+    </div>
+    <div class="field-wrap">
+      <span class="field-label">Notes (optional)</span>
+      <input type="text" placeholder="Optional" id="fNotes">
+    </div>
+    <div class="error-text" id="formError" style="display:none;"></div>
+    <button class="submit-btn" id="addBtn">+ Add entry</button>
+  </div>
+
+  <div class="history-section">
+    <div class="form-header">History</div>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="footer-note">Data is stored only on this device's browser. Use Export backup regularly to keep a copy.</div>
+</div>
+
+<script>
+const GOAL_WEIGHT = 180;
+const STORAGE_KEY = "weightMgmt_entries_v1";
+
+const CALENDAR_IMPORT = [
+  { date: "2026-03-28", weight: 231.2, dose: "2.5mg" },
+  { date: "2026-04-04", weight: 226.4, dose: "2.5mg" },
+  { date: "2026-04-11", weight: 222.6, dose: "2.5mg" },
+  { date: "2026-04-18", weight: 219.7, dose: "2.5mg" },
+  { date: "2026-04-25", weight: 218.0, dose: "5mg" },
+  { date: "2026-05-02", weight: 218.4, dose: "5mg" },
+  { date: "2026-05-09", weight: 216.4, dose: "5mg" },
+  { date: "2026-05-16", weight: 214.9, dose: "5mg" },
+  { date: "2026-05-23", weight: 213.6, dose: "5mg" },
+  { date: "2026-05-30", weight: 213.8, dose: "5mg" },
+  { date: "2026-06-06", weight: 211.2, dose: "5mg" },
+  { date: "2026-06-13", weight: 208.1, dose: "5mg", notes: "weighed in Friday" },
+  { date: "2026-06-20", weight: 206.6, dose: "5mg" },
+  { date: "2026-06-27", weight: 206.1, dose: "5mg" },
+  { date: "2026-07-04", weight: 203.0, dose: "5mg" },
+  { date: "2026-07-11", weight: 203.4, dose: "5mg" },
+  { date: "2026-07-18", weight: 204.5, dose: "5mg" },
+  { date: "2026-07-25", weight: 200.3, dose: "5mg" },
+  { date: "2026-08-01", weight: 200.1, dose: "5mg" },
+];
+
+const CHART_METRICS = [
+  { key: "weight",  label: "Weight",   unit: "lb", showGoal: true },
+  { key: "bodyFat", label: "Body Fat", unit: "%",  showGoal: false },
+  { key: "bmi",     label: "BMI",      unit: "",   showGoal: false },
+  { key: "muscle",  label: "Muscle",   unit: "%",  showGoal: false },
+  { key: "vo2max",  label: "VO2 Max",  unit: "",   showGoal: false },
+  { key: "combined", label: "Weight + BMI + Fat", unit: "", showGoal: false, combined: true },
+];
+
+const COMBINED_KEYS = [
+  { key: "weight", label: "Weight", color: "#c98a4b" },
+  { key: "bmi", label: "BMI", color: "#7ba888" },
+  { key: "bodyFat", label: "Body Fat", color: "#8a9bc9" },
+];
+
+const SUMMARY_ICONS = {
+  weight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l5 4 5-1.5L19 17"/><circle cx="19" cy="17" r="2" fill="currentColor" stroke="none"/></svg>',
+  goal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg>',
+  bmi: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19V11"/><path d="M12 19V5"/><path d="M19 19V14"/></svg>',
+};
+
+function normalize(values) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (max === min) return values.map(() => 50);
+  return values.map(v => ((v - min) / (max - min)) * 100);
+}
+
+function loadEntries() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
+  catch (e) { return []; }
+}
+function saveEntries(list) {
+  list.sort((a, b) => a.date.localeCompare(b.date));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  return list;
+}
+function formatDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function todayISO() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+let entries = loadEntries();
+let chartMetric = "weight";
+let editingDate = null;
+
+function render() {
+  renderSummary();
+  renderChart();
+  renderImportButton();
+  renderHistory();
+  renderFormHeader();
+}
+
+function renderSummary() {
+  const latest = entries[entries.length - 1];
+  const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+  const delta = latest && prev && latest.weight != null && prev.weight != null ? latest.weight - prev.weight : null;
+  const toGoal = latest ? Math.abs(latest.weight - GOAL_WEIGHT).toFixed(1) : "–";
+  const deltaHtml = delta === null
+    ? `<div class="delta-tag" style="color:#6b6659;">&mdash; first entry</div>`
+    : `<div class="delta-tag" style="color:${delta < 0 ? '#7ba888' : '#c9724b'};">${delta < 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(1)} vs last</div>`;
+
+  document.getElementById("summaryRow").innerHTML = `
+    <div class="summary-card">
+      <div class="summary-icon">${SUMMARY_ICONS.weight}</div>
+      <div class="summary-label">Latest weight</div>
+      <div class="summary-value-row"><span class="summary-value">${latest ? latest.weight : "–"}</span><span class="summary-unit">lb</span></div>
+      ${deltaHtml}
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon">${SUMMARY_ICONS.goal}</div>
+      <div class="summary-label">To goal</div>
+      <div class="summary-value-row"><span class="summary-value">${toGoal}</span><span class="summary-unit">lb</span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon">${SUMMARY_ICONS.bmi}</div>
+      <div class="summary-label">Current BMI</div>
+      <div class="summary-value-row"><span class="summary-value">${latest && latest.bmi != null ? latest.bmi : "–"}</span></div>
+    </div>
+  `;
+}
+
+function renderChart() {
+  const chartCard = document.getElementById("chartCard");
+  if (entries.length < 2) { chartCard.style.display = "none"; return; }
+  chartCard.style.display = "block";
+
+  const activeMetric = CHART_METRICS.find(m => m.key === chartMetric);
+  document.getElementById("chartHeader").textContent = `${activeMetric.label} trend`;
+
+  document.getElementById("metricTabs").innerHTML = CHART_METRICS.map(m => {
+    const hasData = m.combined
+      ? entries.filter(e => e.weight != null && e.bmi != null && e.bodyFat != null).length > 1
+      : entries.filter(e => e[m.key] != null).length > 1;
+    const cls = "metric-tab" + (m.key === chartMetric ? " active" : "") + (!hasData ? " disabled" : "");
+    return `<button class="${cls}" data-metric="${m.key}" ${hasData ? "" : "disabled"}>${m.label}</button>`;
+  }).join("");
+  document.querySelectorAll(".metric-tab").forEach(btn => {
+    btn.addEventListener("click", () => { chartMetric = btn.dataset.metric; render(); });
+  });
+
+  if (activeMetric.combined) {
+    renderCombinedChart();
+    return;
+  }
+
+  const data = entries.filter(e => e[chartMetric] != null).map(e => ({ date: e.date, value: e[chartMetric] }));
+  if (data.length < 2) {
+    document.getElementById("chartWrap").innerHTML = `<div class="empty-state">Not enough ${activeMetric.label.toLowerCase()} entries yet.</div>`;
+    return;
+  }
+
+  const w = 480, h = 200, pad = 30;
+  const values = data.map(d => d.value);
+  const minV = Math.min(...values, activeMetric.showGoal ? GOAL_WEIGHT : values[0]) - 2;
+  const maxV = Math.max(...values, activeMetric.showGoal ? GOAL_WEIGHT : values[0]) + 2;
+  const xStep = (w - pad * 2) / (data.length - 1);
+  const points = data.map((d, i) => {
+    const x = pad + i * xStep;
+    const y = h - pad - ((d.value - minV) / (maxV - minV)) * (h - pad * 2);
+    return [x, y];
+  });
+  const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p[0] + "," + p[1]).join(" ");
+
+  let svg = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">`;
+  if (activeMetric.showGoal) {
+    const goalY = h - pad - ((GOAL_WEIGHT - minV) / (maxV - minV)) * (h - pad * 2);
+    svg += `<line x1="${pad}" y1="${goalY}" x2="${w-pad}" y2="${goalY}" stroke="#c98a4b" stroke-dasharray="4,4" stroke-width="1"/>`;
+  }
+  svg += `<path d="${pathD}" fill="none" stroke="#c98a4b" stroke-width="2"/>`;
+  points.forEach(p => { svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#c98a4b"/>`; });
+  data.forEach((d, i) => {
+    if (i === 0 || i === data.length - 1 || i % Math.ceil(data.length / 5) === 0) {
+      svg += `<text x="${points[i][0]}" y="${h-8}" font-size="10" fill="#8a8478" text-anchor="middle">${formatDate(d.date)}</text>`;
+    }
+  });
+  svg += `</svg>`;
+  document.getElementById("chartWrap").innerHTML = svg;
+}
+
+function renderCombinedChart() {
+  const rows = entries.filter(e => e.weight != null && e.bmi != null && e.bodyFat != null);
+  if (rows.length < 2) {
+    document.getElementById("chartWrap").innerHTML = `<div class="empty-state">Not enough combined entries yet &mdash; need weight, BMI, and body fat all logged on the same dates.</div>`;
+    return;
+  }
+
+  const w = 480, h = 200, pad = 30;
+  const xStep = (w - pad * 2) / (rows.length - 1);
+
+  const seriesData = COMBINED_KEYS.map(s => {
+    const raw = rows.map(r => r[s.key]);
+    const norm = normalize(raw);
+    const points = norm.map((v, i) => {
+      const x = pad + i * xStep;
+      const y = h - pad - (v / 100) * (h - pad * 2);
+      return [x, y];
+    });
+    return { ...s, points, raw };
+  });
+
+  let svg = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">`;
+  seriesData.forEach(s => {
+    const pathD = s.points.map((p, i) => (i === 0 ? "M" : "L") + p[0] + "," + p[1]).join(" ");
+    svg += `<path d="${pathD}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+    s.points.forEach(p => { svg += `<circle cx="${p[0]}" cy="${p[1]}" r="2.5" fill="${s.color}"/>`; });
+  });
+  rows.forEach((r, i) => {
+    if (i === 0 || i === rows.length - 1 || i % Math.ceil(rows.length / 5) === 0) {
+      const x = pad + i * xStep;
+      svg += `<text x="${x}" y="${h-8}" font-size="10" fill="#8a8478" text-anchor="middle">${formatDate(r.date)}</text>`;
+    }
+  });
+  svg += `</svg>`;
+
+  const legend = `<div style="display:flex;gap:14px;justify-content:center;margin-top:4px;">
+    ${COMBINED_KEYS.map(k => `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#8a8478;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${k.color};display:inline-block;"></span>${k.label}
+    </div>`).join("")}
+  </div>
+  <div style="font-size:10px;color:#5a564c;text-align:center;margin-top:6px;font-style:italic;">Each line scaled to its own range for comparison &mdash; values shown in history below.</div>`;
+
+  document.getElementById("chartWrap").innerHTML = svg + legend;
+}
+
+function renderImportButton() {
+  const existingDates = new Set(entries.map(e => e.date));
+  const missing = CALENDAR_IMPORT.filter(c => !existingDates.has(c.date));
+  const btn = document.getElementById("importBtn");
+  if (missing.length === 0) { btn.style.display = "none"; return; }
+  btn.style.display = "flex";
+  btn.textContent = `Import ${missing.length} weigh-ins from calendar`;
+}
+
+function renderHistory() {
+  const container = document.getElementById("historyList");
+  if (entries.length === 0) {
+    container.innerHTML = `<div class="empty-state">No entries yet &mdash; log your first weigh-in above.</div>`;
+    return;
+  }
+  const rows = [...entries].reverse().map(e => {
+    const stats = [`<span class="history-stat">${e.weight} lb</span>`];
+    if (e.bmi != null) stats.push(`<span class="history-stat-muted">BMI ${e.bmi}</span>`);
+    if (e.bodyFat != null) stats.push(`<span class="history-stat-muted">BF ${e.bodyFat}%</span>`);
+    if (e.muscle != null) stats.push(`<span class="history-stat-muted">M ${e.muscle}%</span>`);
+    if (e.bone != null) stats.push(`<span class="history-stat-muted">Bone ${e.bone}%</span>`);
+    if (e.water != null) stats.push(`<span class="history-stat-muted">Water ${e.water}%</span>`);
+    if (e.dose) stats.push(`<span class="history-dose">${e.dose}</span>`);
+    if (e.avgSteps != null) stats.push(`<span class="history-stat-muted">${e.avgSteps.toLocaleString()} steps/day</span>`);
+    if (e.avgExercise != null) stats.push(`<span class="history-stat-muted">${e.avgExercise} min/day</span>`);
+    if (e.avgRestingHR != null) stats.push(`<span class="history-stat-muted">RHR ${e.avgRestingHR}</span>`);
+    if (e.vo2max != null) stats.push(`<span class="history-stat-muted">VO2 ${e.vo2max}</span>`);
+    return `
+      <div class="history-row" data-id="${e.id}">
+        <div class="history-date">${formatDate(e.date)}</div>
+        <div class="history-stats">${stats.join("")}</div>
+        ${e.notes ? `<div class="history-notes">${escapeHtml(e.notes)}</div>` : ""}
+        <button class="delete-btn" data-delete-id="${e.id}">&#10005;</button>
+      </div>`;
+  }).join("");
+  container.innerHTML = `<div class="history-list">${rows}</div>`;
+
+  container.querySelectorAll(".history-row").forEach(row => {
+    row.addEventListener("click", (ev) => {
+      if (ev.target.closest(".delete-btn")) return;
+      const entry = entries.find(e => e.id === row.dataset.id);
+      if (entry) handleEditClick(entry);
+    });
+  });
+  container.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const id = btn.dataset.deleteId;
+      const wasEditing = editingDate && entries.find(e => e.id === id)?.date === editingDate;
+      entries = saveEntries(entries.filter(e => e.id !== id));
+      if (wasEditing) cancelEdit();
+      render();
+    });
+  });
+}
+
+function renderFormHeader() {
+  document.getElementById("formHeaderText").textContent = editingDate ? `Editing ${formatDate(editingDate)}` : "Log this week";
+  document.getElementById("cancelEditBtn").style.display = editingDate ? "inline" : "none";
+  document.getElementById("addBtn").innerHTML = editingDate ? "Update entry" : "+ Add entry";
+}
+
+function handleEditClick(entry) {
+  editingDate = entry.date;
+  document.getElementById("fDate").value = entry.date;
+  document.getElementById("fWeight").value = entry.weight ?? "";
+  document.getElementById("fBodyFat").value = entry.bodyFat ?? "";
+  document.getElementById("fBmi").value = entry.bmi ?? "";
+  document.getElementById("fMuscle").value = entry.muscle ?? "";
+  document.getElementById("fBone").value = entry.bone ?? "";
+  document.getElementById("fWater").value = entry.water ?? "";
+  document.getElementById("fDose").value = entry.dose ? entry.dose.replace(/mg$/i, "") : "";
+  document.getElementById("fAvgSteps").value = entry.avgSteps ?? "";
+  document.getElementById("fAvgExercise").value = entry.avgExercise ?? "";
+  document.getElementById("fAvgRestingHR").value = entry.avgRestingHR ?? "";
+  document.getElementById("fVo2max").value = entry.vo2max ?? "";
+  document.getElementById("fNotes").value = entry.notes || "";
+  document.getElementById("formError").style.display = "none";
+  renderFormHeader();
+  document.querySelector(".form-card").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cancelEdit() {
+  editingDate = null;
+  clearForm();
+  renderFormHeader();
+}
+
+function clearForm() {
+  ["fWeight","fBmi","fBodyFat","fMuscle","fBone","fWater","fDose","fAvgSteps","fAvgExercise","fAvgRestingHR","fVo2max","fNotes"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("fDate").value = todayISO();
+}
+
+document.getElementById("cancelEditBtn").addEventListener("click", cancelEdit);
+
+document.getElementById("importBtn").addEventListener("click", () => {
+  const existingDates = new Set(entries.map(e => e.date));
+  const toAdd = CALENDAR_IMPORT.filter(c => !existingDates.has(c.date)).map(c => ({
+    id: `${c.date}-import-${Date.now()}-${Math.random()}`,
+    date: c.date, weight: c.weight,
+    bmi: null, bodyFat: null, muscle: null, bone: null, water: null,
+    dose: c.dose || null, notes: c.notes || "",
+  }));
+  if (toAdd.length === 0) return;
+  entries = saveEntries([...entries, ...toAdd]);
+  document.getElementById("importSuccess").style.display = "block";
+  setTimeout(() => { document.getElementById("importSuccess").style.display = "none"; }, 2500);
+  render();
+});
+
+document.getElementById("addBtn").addEventListener("click", () => {
+  const date = document.getElementById("fDate").value;
+  const weight = document.getElementById("fWeight").value;
+  const errorEl = document.getElementById("formError");
+  if (!date || !weight) {
+    errorEl.textContent = "Date and weight are required.";
+    errorEl.style.display = "block";
+    return;
+  }
+  errorEl.style.display = "none";
+
+  const dose = document.getElementById("fDose").value;
+  const entry = {
+    id: `${date}-${Date.now()}`,
+    date,
+    weight: parseFloat(weight),
+    bmi: document.getElementById("fBmi").value ? parseFloat(document.getElementById("fBmi").value) : null,
+    bodyFat: document.getElementById("fBodyFat").value ? parseFloat(document.getElementById("fBodyFat").value) : null,
+    muscle: document.getElementById("fMuscle").value ? parseFloat(document.getElementById("fMuscle").value) : null,
+    bone: document.getElementById("fBone").value ? parseFloat(document.getElementById("fBone").value) : null,
+    water: document.getElementById("fWater").value ? parseFloat(document.getElementById("fWater").value) : null,
+    dose: dose ? `${dose}mg` : null,
+    avgSteps: document.getElementById("fAvgSteps").value ? parseInt(document.getElementById("fAvgSteps").value, 10) : null,
+    avgExercise: document.getElementById("fAvgExercise").value ? parseInt(document.getElementById("fAvgExercise").value, 10) : null,
+    avgRestingHR: document.getElementById("fAvgRestingHR").value ? parseInt(document.getElementById("fAvgRestingHR").value, 10) : null,
+    vo2max: document.getElementById("fVo2max").value ? parseFloat(document.getElementById("fVo2max").value) : null,
+    notes: document.getElementById("fNotes").value || "",
+  };
+
+  entries = saveEntries([...entries.filter(e => e.date !== entry.date), entry]);
+  editingDate = null;
+  clearForm();
+  render();
+});
+
+// --- Backup: export / import ---
+function showBackupMessage(el, text, ms) {
+  el.textContent = text;
+  el.style.display = "block";
+  if (ms) setTimeout(() => { el.style.display = "none"; }, ms);
+}
+
+document.getElementById("exportBtn").addEventListener("click", async () => {
+  const successEl = document.getElementById("backupSuccess");
+  const errorEl = document.getElementById("backupError");
+  errorEl.style.display = "none";
+  const payload = {
+    app: "weight-management",
+    exportedAt: new Date().toISOString(),
+    entries,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const filename = `weight-management-backup-${todayISO()}.json`;
+  const blob = new Blob([json], { type: "application/json" });
+
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: "application/json" })] })) {
+      const file = new File([blob], filename, { type: "application/json" });
+      await navigator.share({ files: [file], title: filename });
+      showBackupMessage(successEl, "Backup shared.", 2500);
+      return;
+    }
+  } catch (e) {
+    // user cancelled share sheet or share failed silently — fall through to download
+  }
+
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    showBackupMessage(successEl, "Backup downloaded.", 2500);
+  } catch (e) {
+    showBackupMessage(errorEl, "Export failed: " + e.message, 4000);
+  }
+});
+
+document.getElementById("importDataBtn").addEventListener("click", () => {
+  document.getElementById("importFileInput").click();
+});
+
+document.getElementById("importFileInput").addEventListener("change", (ev) => {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const successEl = document.getElementById("backupSuccess");
+  const errorEl = document.getElementById("backupError");
+  successEl.style.display = "none";
+  errorEl.style.display = "none";
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const incoming = Array.isArray(parsed) ? parsed : parsed.entries;
+      if (!Array.isArray(incoming)) throw new Error("File does not contain a valid entries list.");
+      const valid = incoming.filter(e => e && typeof e.date === "string" && typeof e.weight === "number");
+      if (valid.length === 0) throw new Error("No valid entries found in file.");
+
+      const byDate = new Map(entries.map(e => [e.date, e]));
+      valid.forEach(e => {
+        byDate.set(e.date, {
+          id: e.id || `${e.date}-restored-${Date.now()}-${Math.random()}`,
+          date: e.date,
+          weight: e.weight,
+          bmi: e.bmi ?? null,
+          bodyFat: e.bodyFat ?? null,
+          muscle: e.muscle ?? null,
+          bone: e.bone ?? null,
+          water: e.water ?? null,
+          dose: e.dose ?? null,
+          avgSteps: e.avgSteps ?? null,
+          avgExercise: e.avgExercise ?? null,
+          avgRestingHR: e.avgRestingHR ?? null,
+          vo2max: e.vo2max ?? null,
+          notes: e.notes || "",
+        });
+      });
+      entries = saveEntries([...byDate.values()]);
+      showBackupMessage(successEl, `Restored ${valid.length} entries.`, 3000);
+      render();
+    } catch (e) {
+      showBackupMessage(errorEl, "Restore failed: " + e.message, 4500);
+    } finally {
+      ev.target.value = "";
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById("fDate").value = todayISO();
+render();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
