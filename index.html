@@ -65,6 +65,19 @@
   .metric-tab.disabled { opacity: 0.35; cursor: default; }
   svg text { font-family: -apple-system, sans-serif; }
 
+  .chart-wrap { position: relative; }
+  .scrub-capture { touch-action: none; cursor: crosshair; }
+  .chart-tooltip {
+    position: absolute; top: 4px; transform: translateX(-50%);
+    background: var(--bg); border: 1px solid var(--border-input); border-radius: 8px;
+    padding: 6px 9px; font-size: 11px; color: var(--text); pointer-events: none;
+    white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.35); z-index: 2;
+  }
+  .chart-tooltip .tt-date { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
+  .chart-tooltip .tt-row { display: flex; align-items: center; gap: 5px; }
+  .chart-tooltip .tt-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .chart-tooltip .tt-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+
   .import-btn {
     display: flex; align-items: center; justify-content: center; width: 100%;
     background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border);
@@ -144,7 +157,7 @@
   <div class="chart-card" id="chartCard" style="display:none;">
     <div class="chart-header" id="chartHeader">Weight trend</div>
     <div class="metric-tabs" id="metricTabs"></div>
-    <div id="chartWrap"></div>
+    <div class="chart-wrap" id="chartWrap"></div>
   </div>
 
   <button class="import-btn" id="importBtn" style="display:none;"></button>
@@ -233,13 +246,12 @@ const CHART_METRICS = [
   { key: "bmi",     label: "BMI",      unit: "",   showGoal: false },
   { key: "muscle",  label: "Muscle",   unit: "%",  showGoal: false },
   { key: "vo2max",  label: "VO2 Max",  unit: "",   showGoal: false },
-  { key: "combined", label: "Weight + BMI + Fat", unit: "", showGoal: false, combined: true },
+  { key: "combined", label: "Weight + Exercise", unit: "", showGoal: false, combined: true },
 ];
 
 const COMBINED_KEYS = [
-  { key: "weight", label: "Weight", color: "#c98a4b" },
-  { key: "bmi", label: "BMI", color: "#7ba888" },
-  { key: "bodyFat", label: "Body Fat", color: "#8a9bc9" },
+  { key: "weight", label: "Weight", unit: "lb", color: "#c98a4b" },
+  { key: "avgExercise", label: "Exercise", unit: "min/day", color: "#7ba888" },
 ];
 
 const SUMMARY_ICONS = {
@@ -320,6 +332,34 @@ function renderSummary() {
   `;
 }
 
+function attachChartScrubber(wrap, { w, pad, count, xStep, onShow, onHide }) {
+  const svg = wrap.querySelector("svg");
+  const capture = wrap.querySelector(".scrub-capture");
+  if (!svg || !capture) return;
+
+  function indexFromClientX(clientX) {
+    const rect = svg.getBoundingClientRect();
+    const svgX = (clientX - rect.left) * (w / rect.width);
+    return Math.max(0, Math.min(count - 1, Math.round((svgX - pad) / xStep)));
+  }
+  function handleMove(e) { onShow(indexFromClientX(e.clientX)); }
+
+  capture.addEventListener("pointerdown", (e) => { capture.setPointerCapture(e.pointerId); handleMove(e); });
+  capture.addEventListener("pointermove", handleMove);
+  capture.addEventListener("pointerup", onHide);
+  capture.addEventListener("pointercancel", onHide);
+  capture.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") onHide(); });
+}
+
+function positionTooltipX(tooltip, svg, wrap, svgX, w) {
+  const svgRect = svg.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  let left = svgX * (svgRect.width / w) + (svgRect.left - wrapRect.left);
+  const half = (tooltip.offsetWidth || 80) / 2;
+  left = Math.max(half + 2, Math.min(wrapRect.width - half - 2, left));
+  tooltip.style.left = left + "px";
+}
+
 function renderChart() {
   const chartCard = document.getElementById("chartCard");
   if (entries.length < 2) { chartCard.style.display = "none"; return; }
@@ -330,7 +370,7 @@ function renderChart() {
 
   document.getElementById("metricTabs").innerHTML = CHART_METRICS.map(m => {
     const hasData = m.combined
-      ? entries.filter(e => e.weight != null && e.bmi != null && e.bodyFat != null).length > 1
+      ? entries.filter(e => e.weight != null && e.avgExercise != null).length > 1
       : entries.filter(e => e[m.key] != null).length > 1;
     const cls = "metric-tab" + (m.key === chartMetric ? " active" : "") + (!hasData ? " disabled" : "");
     return `<button class="${cls}" data-metric="${m.key}" ${hasData ? "" : "disabled"}>${m.label}</button>`;
@@ -374,14 +414,48 @@ function renderChart() {
       svg += `<text x="${points[i][0]}" y="${h-8}" font-size="10" fill="#8a8478" text-anchor="middle">${formatDate(d.date)}</text>`;
     }
   });
+  svg += `<line class="scrub-line" x1="0" y1="4" x2="0" y2="${h-16}" stroke="var(--border-input)" stroke-width="1" style="display:none;"/>`;
+  svg += `<circle class="scrub-dot" r="4.5" fill="#c98a4b" stroke="var(--bg)" stroke-width="1.5" style="display:none;"/>`;
+  svg += `<rect class="scrub-capture" x="${pad}" y="0" width="${w - pad * 2}" height="${h}" fill="transparent"/>`;
   svg += `</svg>`;
-  document.getElementById("chartWrap").innerHTML = svg;
+
+  document.getElementById("chartWrap").innerHTML = svg + `<div class="chart-tooltip" id="chartTooltip" style="display:none;"></div>`;
+
+  const wrap = document.getElementById("chartWrap");
+  const svgEl = wrap.querySelector("svg");
+  const tooltip = document.getElementById("chartTooltip");
+  const scrubLine = wrap.querySelector(".scrub-line");
+  const scrubDot = wrap.querySelector(".scrub-dot");
+
+  attachChartScrubber(wrap, {
+    w, pad, count: data.length, xStep,
+    onShow(idx) {
+      const p = points[idx];
+      const d = data[idx];
+      scrubLine.setAttribute("x1", p[0]);
+      scrubLine.setAttribute("x2", p[0]);
+      scrubLine.style.display = "block";
+      scrubDot.setAttribute("cx", p[0]);
+      scrubDot.setAttribute("cy", p[1]);
+      scrubDot.style.display = "block";
+      tooltip.innerHTML = `<div class="tt-date">${formatDate(d.date)}</div>` +
+        `<div class="tt-row"><span class="tt-dot" style="background:#c98a4b"></span>` +
+        `<span class="tt-value">${d.value}${activeMetric.unit ? " " + activeMetric.unit : ""}</span></div>`;
+      tooltip.style.display = "block";
+      positionTooltipX(tooltip, svgEl, wrap, p[0], w);
+    },
+    onHide() {
+      scrubLine.style.display = "none";
+      scrubDot.style.display = "none";
+      tooltip.style.display = "none";
+    },
+  });
 }
 
 function renderCombinedChart() {
-  const rows = entries.filter(e => e.weight != null && e.bmi != null && e.bodyFat != null);
+  const rows = entries.filter(e => e.weight != null && e.avgExercise != null);
   if (rows.length < 2) {
-    document.getElementById("chartWrap").innerHTML = `<div class="empty-state">Not enough combined entries yet &mdash; need weight, BMI, and body fat all logged on the same dates.</div>`;
+    document.getElementById("chartWrap").innerHTML = `<div class="empty-state">Not enough combined entries yet &mdash; need weight and average exercise logged on the same dates.</div>`;
     return;
   }
 
@@ -411,6 +485,11 @@ function renderCombinedChart() {
       svg += `<text x="${x}" y="${h-8}" font-size="10" fill="#8a8478" text-anchor="middle">${formatDate(r.date)}</text>`;
     }
   });
+  svg += `<line class="scrub-line" x1="0" y1="4" x2="0" y2="${h-16}" stroke="var(--border-input)" stroke-width="1" style="display:none;"/>`;
+  seriesData.forEach(s => {
+    svg += `<circle class="scrub-dot" r="4" fill="${s.color}" stroke="var(--bg)" stroke-width="1.5" style="display:none;"/>`;
+  });
+  svg += `<rect class="scrub-capture" x="${pad}" y="0" width="${w - pad * 2}" height="${h}" fill="transparent"/>`;
   svg += `</svg>`;
 
   const legend = `<div style="display:flex;gap:14px;justify-content:center;margin-top:4px;">
@@ -420,7 +499,39 @@ function renderCombinedChart() {
   </div>
   <div style="font-size:10px;color:#5a564c;text-align:center;margin-top:6px;font-style:italic;">Each line scaled to its own range for comparison &mdash; values shown in history below.</div>`;
 
-  document.getElementById("chartWrap").innerHTML = svg + legend;
+  document.getElementById("chartWrap").innerHTML = svg + legend + `<div class="chart-tooltip" id="chartTooltip" style="display:none;"></div>`;
+
+  const wrap = document.getElementById("chartWrap");
+  const svgEl = wrap.querySelector("svg");
+  const tooltip = document.getElementById("chartTooltip");
+  const scrubLine = wrap.querySelector(".scrub-line");
+  const scrubDots = wrap.querySelectorAll(".scrub-dot");
+
+  attachChartScrubber(wrap, {
+    w, pad, count: rows.length, xStep,
+    onShow(idx) {
+      const x = pad + idx * xStep;
+      scrubLine.setAttribute("x1", x);
+      scrubLine.setAttribute("x2", x);
+      scrubLine.style.display = "block";
+      scrubDots.forEach((dot, i) => {
+        const p = seriesData[i].points[idx];
+        dot.setAttribute("cx", p[0]);
+        dot.setAttribute("cy", p[1]);
+        dot.style.display = "block";
+      });
+      tooltip.innerHTML = `<div class="tt-date">${formatDate(rows[idx].date)}</div>` +
+        seriesData.map(s => `<div class="tt-row"><span class="tt-dot" style="background:${s.color}"></span>` +
+          `<span class="tt-value">${s.raw[idx]}${s.unit ? " " + s.unit : ""}</span></div>`).join("");
+      tooltip.style.display = "block";
+      positionTooltipX(tooltip, svgEl, wrap, x, w);
+    },
+    onHide() {
+      scrubLine.style.display = "none";
+      scrubDots.forEach(dot => dot.style.display = "none");
+      tooltip.style.display = "none";
+    },
+  });
 }
 
 function renderImportButton() {

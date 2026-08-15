@@ -1,2 +1,5 @@
 weight-management (2).html
+weight-management-backup*.json
+*.numbers
 .DS_Store
+.claude/
