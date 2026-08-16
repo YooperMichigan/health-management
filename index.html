@@ -47,12 +47,12 @@
 
   .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
   .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; }
-  .summary-icon { color: var(--accent); margin-bottom: 2px; }
   .summary-label { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; }
   .summary-value-row { display: flex; align-items: baseline; gap: 3px; }
   .summary-value { color: var(--text); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .summary-unit { color: var(--muted); font-size: 11px; }
   .delta-tag { display: flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; margin-top: 2px; }
+  .summary-subline { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; margin-top: 1px; }
 
   .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px 10px; margin-bottom: 16px; }
   .chart-header { color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 8px; margin-left: 4px; }
@@ -134,7 +134,7 @@
     </div>
     <div>
       <h1>Weight Management</h1>
-      <p class="subtitle">Weekly tracking &middot; goal <span id="goalWeight">180</span> lb</p>
+      <p class="subtitle">Goal <span id="goalWeight">180</span> lb &middot; BMI 23.7 &middot; 16% body fat</p>
     </div>
   </header>
 
@@ -236,6 +236,8 @@
 
 <script>
 const GOAL_WEIGHT = 180;
+const GOAL_BMI = 23.7;
+const GOAL_BODY_FAT = 16;
 const STORAGE_KEY = "weightMgmt_entries_v1";
 
 const CALENDAR_IMPORT = [];
@@ -253,12 +255,6 @@ const COMBINED_KEYS = [
   { key: "weight", label: "Weight", unit: "lb", color: "#c98a4b" },
   { key: "avgExercise", label: "Exercise", unit: "min/day", color: "#7ba888" },
 ];
-
-const SUMMARY_ICONS = {
-  weight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l5 4 5-1.5L19 17"/><circle cx="19" cy="17" r="2" fill="currentColor" stroke="none"/></svg>',
-  goal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg>',
-  bmi: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19V11"/><path d="M12 19V5"/><path d="M19 19V14"/></svg>',
-};
 
 function normalize(values) {
   const min = Math.min(...values);
@@ -308,26 +304,28 @@ function renderSummary() {
   const prev = entries.length > 1 ? entries[entries.length - 2] : null;
   const delta = latest && prev && latest.weight != null && prev.weight != null ? latest.weight - prev.weight : null;
   const toGoal = latest ? Math.abs(latest.weight - GOAL_WEIGHT).toFixed(1) : "–";
+  const bmiToGoal = latest && latest.bmi != null ? Math.abs(latest.bmi - GOAL_BMI).toFixed(1) : null;
+  const bodyFatToGoal = latest && latest.bodyFat != null ? Math.abs(latest.bodyFat - GOAL_BODY_FAT).toFixed(1) : null;
   const deltaHtml = delta === null
     ? `<div class="delta-tag" style="color:#6b6659;">&mdash; first entry</div>`
     : `<div class="delta-tag" style="color:${delta < 0 ? '#7ba888' : '#c9724b'};">${delta < 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(1)} vs last</div>`;
 
   document.getElementById("summaryRow").innerHTML = `
     <div class="summary-card">
-      <div class="summary-icon">${SUMMARY_ICONS.weight}</div>
       <div class="summary-label">Latest weight</div>
       <div class="summary-value-row"><span class="summary-value">${latest ? latest.weight : "–"}</span><span class="summary-unit">lb</span></div>
       ${deltaHtml}
     </div>
     <div class="summary-card">
-      <div class="summary-icon">${SUMMARY_ICONS.goal}</div>
-      <div class="summary-label">To goal</div>
-      <div class="summary-value-row"><span class="summary-value">${toGoal}</span><span class="summary-unit">lb</span></div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-icon">${SUMMARY_ICONS.bmi}</div>
       <div class="summary-label">Current BMI</div>
       <div class="summary-value-row"><span class="summary-value">${latest && latest.bmi != null ? latest.bmi : "–"}</span></div>
+      <div class="summary-subline">${latest && latest.bodyFat != null ? latest.bodyFat + "% body fat" : "&ndash; body fat"}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">To goal</div>
+      <div class="summary-value-row"><span class="summary-value">${toGoal}</span><span class="summary-unit">lb</span></div>
+      <div class="summary-subline">${bmiToGoal != null ? bmiToGoal + " BMI" : "&ndash; BMI"}</div>
+      <div class="summary-subline">${bodyFatToGoal != null ? bodyFatToGoal + "% fat" : "&ndash; fat"}</div>
     </div>
   `;
 }
