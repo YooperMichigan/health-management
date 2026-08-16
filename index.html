@@ -298,16 +298,23 @@ function render() {
   renderFormHeader();
 }
 
+function deltaTagHtml(delta, { firstEntryFallback = false } = {}) {
+  if (delta === null) {
+    return firstEntryFallback ? `<div class="delta-tag" style="color:#6b6659;">&mdash; first entry</div>` : "";
+  }
+  return `<div class="delta-tag" style="color:${delta < 0 ? '#7ba888' : '#c9724b'};">${delta < 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(1)} vs last</div>`;
+}
+
 function renderSummary() {
   const latest = entries[entries.length - 1];
   const prev = entries.length > 1 ? entries[entries.length - 2] : null;
   const delta = latest && prev && latest.weight != null && prev.weight != null ? latest.weight - prev.weight : null;
+  const bmiDelta = latest && prev && latest.bmi != null && prev.bmi != null ? latest.bmi - prev.bmi : null;
+  const bodyFatDelta = latest && prev && latest.bodyFat != null && prev.bodyFat != null ? latest.bodyFat - prev.bodyFat : null;
   const toGoal = latest ? Math.abs(latest.weight - GOAL_WEIGHT).toFixed(1) : "–";
   const bmiToGoal = latest && latest.bmi != null ? Math.abs(latest.bmi - GOAL_BMI).toFixed(1) : null;
   const bodyFatToGoal = latest && latest.bodyFat != null ? Math.abs(latest.bodyFat - GOAL_BODY_FAT).toFixed(1) : null;
-  const deltaHtml = delta === null
-    ? `<div class="delta-tag" style="color:#6b6659;">&mdash; first entry</div>`
-    : `<div class="delta-tag" style="color:${delta < 0 ? '#7ba888' : '#c9724b'};">${delta < 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(1)} vs last</div>`;
+  const deltaHtml = deltaTagHtml(delta, { firstEntryFallback: true });
 
   document.getElementById("summaryRow").innerHTML = `
     <div class="summary-card">
@@ -318,15 +325,17 @@ function renderSummary() {
     <div class="summary-card">
       <div class="summary-label">Current BMI</div>
       <div class="summary-value-row"><span class="summary-value">${latest && latest.bmi != null ? latest.bmi : "–"}</span></div>
+      ${deltaTagHtml(bmiDelta)}
       <div class="summary-label">Current body fat</div>
       <div class="summary-value-row"><span class="summary-value">${latest && latest.bodyFat != null ? latest.bodyFat : "–"}</span>${latest && latest.bodyFat != null ? '<span class="summary-unit">%</span>' : ""}</div>
+      ${deltaTagHtml(bodyFatDelta)}
     </div>
     <div class="summary-card">
       <div class="summary-label">To goal</div>
       <div class="summary-value-row"><span class="summary-value">${toGoal}</span><span class="summary-unit">lb</span></div>
-      <div class="summary-label">BMI to goal</div>
+      <div class="summary-label">BMI</div>
       <div class="summary-value-row"><span class="summary-value">${bmiToGoal != null ? bmiToGoal : "–"}</span></div>
-      <div class="summary-label">Body fat to goal</div>
+      <div class="summary-label">Body fat</div>
       <div class="summary-value-row"><span class="summary-value">${bodyFatToGoal != null ? bodyFatToGoal : "–"}</span>${bodyFatToGoal != null ? '<span class="summary-unit">%</span>' : ""}</div>
     </div>
   `;
