@@ -52,7 +52,6 @@
   .summary-value { color: var(--text); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .summary-unit { color: var(--muted); font-size: 11px; }
   .delta-tag { display: flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; margin-top: 2px; }
-  .summary-subline { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; margin-top: 1px; }
 
   .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px 10px; margin-bottom: 16px; }
   .chart-header { color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 8px; margin-left: 4px; }
@@ -319,13 +318,16 @@ function renderSummary() {
     <div class="summary-card">
       <div class="summary-label">Current BMI</div>
       <div class="summary-value-row"><span class="summary-value">${latest && latest.bmi != null ? latest.bmi : "–"}</span></div>
-      <div class="summary-subline">${latest && latest.bodyFat != null ? latest.bodyFat + "% body fat" : "&ndash; body fat"}</div>
+      <div class="summary-label">Current body fat</div>
+      <div class="summary-value-row"><span class="summary-value">${latest && latest.bodyFat != null ? latest.bodyFat : "–"}</span>${latest && latest.bodyFat != null ? '<span class="summary-unit">%</span>' : ""}</div>
     </div>
     <div class="summary-card">
       <div class="summary-label">To goal</div>
       <div class="summary-value-row"><span class="summary-value">${toGoal}</span><span class="summary-unit">lb</span></div>
-      <div class="summary-subline">${bmiToGoal != null ? bmiToGoal + " BMI" : "&ndash; BMI"}</div>
-      <div class="summary-subline">${bodyFatToGoal != null ? bodyFatToGoal + "% fat" : "&ndash; fat"}</div>
+      <div class="summary-label">BMI to goal</div>
+      <div class="summary-value-row"><span class="summary-value">${bmiToGoal != null ? bmiToGoal : "–"}</span></div>
+      <div class="summary-label">Body fat to goal</div>
+      <div class="summary-value-row"><span class="summary-value">${bodyFatToGoal != null ? bodyFatToGoal : "–"}</span>${bodyFatToGoal != null ? '<span class="summary-unit">%</span>' : ""}</div>
     </div>
   `;
 }
