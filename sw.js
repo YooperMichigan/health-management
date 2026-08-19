@@ -1,5 +1,5 @@
 // Bump this version string whenever app files change, so clients pick up the update.
-const CACHE_NAME = "weight-mgmt-v7";
+const CACHE_NAME = "weight-mgmt-v8";
 
 const PRECACHE_URLS = [
   "./",
