@@ -10,15 +10,33 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Weight Management">
-<meta name="theme-color" content="#141210">
+<meta name="theme-color" content="#f7f5f0">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 
 <style>
   :root {
+    --bg: #f7f5f0; --card: #ffffff; --border: #e5e0d5; --border-input: #d6d0c1;
+    --text: #241f18; --muted: #726c5e; --muted-dim: #8c8676; --muted-faint: #a49e8f; --muted-faintest: #b6b0a0;
+    --accent: #ad6f34;
+    --green: #3f8f63; --green-bg: #e7f3ec; --green-border: #bfe0cc; --red: #b6552f;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141210; --card: #1c1a16; --border: #2e2b26; --border-input: #35322b;
+      --text: #e8e4dc; --muted: #8a8478; --muted-dim: #6b6659; --muted-faint: #5a564c; --muted-faintest: #524e44;
+      --accent: #c98a4b;
+      --green: #7ba888; --green-bg: #1e2b24; --green-border: #2e3d34; --red: #c9724b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
     --bg: #141210; --card: #1c1a16; --border: #2e2b26; --border-input: #35322b;
-    --text: #e8e4dc; --muted: #8a8478; --accent: #c98a4b;
+    --text: #e8e4dc; --muted: #8a8478; --muted-dim: #6b6659; --muted-faint: #5a564c; --muted-faintest: #524e44;
+    --accent: #c98a4b;
     --green: #7ba888; --green-bg: #1e2b24; --green-border: #2e3d34; --red: #c9724b;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -98,7 +116,7 @@
     box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; font-family: inherit;
     -webkit-appearance: none; appearance: none;
   }
-  input::placeholder { color: #5a564c; }
+  input::placeholder { color: var(--muted-faint); }
   .error-text { color: var(--red); font-size: 12.5px; margin-bottom: 8px; }
   .submit-btn {
     display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
@@ -108,7 +126,7 @@
   .submit-btn:active { opacity: 0.85; }
 
   .history-section { margin-bottom: 8px; }
-  .empty-state { color: #6b6659; font-size: 13px; padding: 20px 0; text-align: center; }
+  .empty-state { color: var(--muted-dim); font-size: 13px; padding: 20px 0; text-align: center; }
   .history-list { display: flex; flex-direction: column; gap: 8px; }
   .history-row { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; position: relative; cursor: pointer; }
   .history-date { color: var(--accent); font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
@@ -117,10 +135,41 @@
   .history-stat-muted { color: var(--muted); font-size: 12px; }
   .history-dose { color: var(--green); font-size: 11.5px; font-weight: 500; background: var(--green-bg); padding: 2px 7px; border-radius: 5px; }
   .history-notes { color: var(--muted); font-size: 12px; margin-top: 5px; font-style: italic; }
-  .delete-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #5a564c; cursor: pointer; padding: 6px; font-size: 13px; line-height: 1; }
+  .delete-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--muted-faint); cursor: pointer; padding: 6px; font-size: 13px; line-height: 1; }
 
-  .footer-note { color: #524e44; font-size: 10.5px; text-align: center; margin-top: 24px; line-height: 1.5; }
+  .footer-note { color: var(--muted-faintest); font-size: 10.5px; text-align: center; margin-top: 24px; line-height: 1.5; }
+
+  .menu-btn {
+    width: 34px; height: 34px; flex-shrink: 0; background: var(--card); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 20;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal-sheet {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px 16px 0 0;
+    padding: 18px 16px max(18px, env(safe-area-inset-bottom)); width: 100%; max-width: 520px;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-title { font-size: 16px; font-weight: 600; color: var(--text); }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; }
+  .modal-section-label { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .theme-toggle { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .theme-option {
+    flex: 1; background: transparent; border: none; border-radius: 8px; padding: 9px 0;
+    font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer;
+  }
+  .theme-option.active { background: var(--accent); color: var(--bg); }
 </style>
+<script>
+(function() {
+  try {
+    var t = localStorage.getItem("weightMgmt_theme");
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 <div class="container">
@@ -131,11 +180,29 @@
         <circle cx="19" cy="16" r="2.4" fill="#141210"/>
       </svg>
     </div>
-    <div>
+    <div style="flex:1;min-width:0;">
       <h1>Weight Management</h1>
       <p class="subtitle">Goal <span id="goalWeight">180</span> lb &middot; BMI 23.7 &middot; 16% body fat</p>
     </div>
+    <button class="menu-btn" id="menuBtn" aria-label="Settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+    </button>
   </header>
+
+  <div class="modal-overlay" id="menuOverlay" style="display:none;">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">Menu</div>
+        <button class="modal-close" id="menuCloseBtn">Close</button>
+      </div>
+      <div class="modal-section-label">Appearance</div>
+      <div class="theme-toggle">
+        <button class="theme-option" data-theme="system">System</button>
+        <button class="theme-option" data-theme="light">Light</button>
+        <button class="theme-option" data-theme="dark">Dark</button>
+      </div>
+    </div>
+  </div>
 
   <div class="backup-row">
     <button class="backup-btn" id="exportBtn">
@@ -238,6 +305,28 @@ const GOAL_WEIGHT = 180;
 const GOAL_BMI = 23.7;
 const GOAL_BODY_FAT = 16;
 const STORAGE_KEY = "weightMgmt_entries_v1";
+const THEME_KEY = "weightMgmt_theme";
+
+function loadTheme() {
+  const t = localStorage.getItem(THEME_KEY);
+  return t === "light" || t === "dark" ? t : "system";
+}
+function applyTheme(mode) {
+  if (mode === "light" || mode === "dark") {
+    document.documentElement.setAttribute("data-theme", mode);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", bg);
+  document.querySelectorAll(".theme-option").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.theme === mode);
+  });
+}
+function setTheme(mode) {
+  localStorage.setItem(THEME_KEY, mode);
+  applyTheme(mode);
+}
 
 const CALENDAR_IMPORT = [];
 
@@ -251,8 +340,8 @@ const CHART_METRICS = [
 ];
 
 const COMBINED_KEYS = [
-  { key: "weight", label: "Weight", unit: "lb", color: "#c98a4b" },
-  { key: "avgExercise", label: "Exercise", unit: "min/day", color: "#7ba888" },
+  { key: "weight", label: "Weight", unit: "lb", color: "var(--accent)" },
+  { key: "avgExercise", label: "Exercise", unit: "min/day", color: "var(--green)" },
 ];
 
 function normalize(values) {
@@ -300,9 +389,9 @@ function render() {
 
 function deltaTagHtml(delta, { firstEntryFallback = false } = {}) {
   if (delta === null) {
-    return firstEntryFallback ? `<div class="delta-tag" style="color:#6b6659;">&mdash; first entry</div>` : "";
+    return firstEntryFallback ? `<div class="delta-tag" style="color:var(--muted-dim);">&mdash; first entry</div>` : "";
   }
-  return `<div class="delta-tag" style="color:${delta < 0 ? '#7ba888' : '#c9724b'};">${delta < 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(1)} vs last</div>`;
+  return `<div class="delta-tag" style="color:${delta < 0 ? 'var(--green)' : 'var(--red)'};">${delta < 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(1)} vs last</div>`;
 }
 
 function renderSummary() {
@@ -414,17 +503,17 @@ function renderChart() {
   let svg = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">`;
   if (activeMetric.showGoal) {
     const goalY = h - pad - ((GOAL_WEIGHT - minV) / (maxV - minV)) * (h - pad * 2);
-    svg += `<line x1="${pad}" y1="${goalY}" x2="${w-pad}" y2="${goalY}" stroke="#c98a4b" stroke-dasharray="4,4" stroke-width="1"/>`;
+    svg += `<line x1="${pad}" y1="${goalY}" x2="${w-pad}" y2="${goalY}" style="stroke:var(--accent);" stroke-dasharray="4,4" stroke-width="1"/>`;
   }
-  svg += `<path d="${pathD}" fill="none" stroke="#c98a4b" stroke-width="2"/>`;
-  points.forEach(p => { svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#c98a4b"/>`; });
+  svg += `<path d="${pathD}" fill="none" style="stroke:var(--accent);" stroke-width="2"/>`;
+  points.forEach(p => { svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" style="fill:var(--accent);"/>`; });
   data.forEach((d, i) => {
     if (i === 0 || i === data.length - 1 || i % Math.ceil(data.length / 5) === 0) {
-      svg += `<text x="${points[i][0]}" y="${h-8}" font-size="10" fill="#8a8478" text-anchor="middle">${formatDate(d.date)}</text>`;
+      svg += `<text x="${points[i][0]}" y="${h-8}" font-size="10" style="fill:var(--muted);" text-anchor="middle">${formatDate(d.date)}</text>`;
     }
   });
   svg += `<line class="scrub-line" x1="0" y1="4" x2="0" y2="${h-16}" stroke="var(--border-input)" stroke-width="1" style="display:none;"/>`;
-  svg += `<circle class="scrub-dot" r="4.5" fill="#c98a4b" stroke="var(--bg)" stroke-width="1.5" style="display:none;"/>`;
+  svg += `<circle class="scrub-dot" r="4.5" stroke="var(--bg)" stroke-width="1.5" style="fill:var(--accent);display:none;"/>`;
   svg += `<rect class="scrub-capture" x="${pad}" y="0" width="${w - pad * 2}" height="${h}" fill="transparent"/>`;
   svg += `</svg>`;
 
@@ -448,7 +537,7 @@ function renderChart() {
       scrubDot.setAttribute("cy", p[1]);
       scrubDot.style.display = "block";
       tooltip.innerHTML = `<div class="tt-date">${formatDate(d.date)}</div>` +
-        `<div class="tt-row"><span class="tt-dot" style="background:#c98a4b"></span>` +
+        `<div class="tt-row"><span class="tt-dot" style="background:var(--accent)"></span>` +
         `<span class="tt-value">${d.value}${activeMetric.unit ? " " + activeMetric.unit : ""}</span></div>`;
       tooltip.style.display = "block";
       positionTooltipX(tooltip, svgEl, wrap, p[0], w);
@@ -491,7 +580,7 @@ function renderCombinedChart() {
   rows.forEach((r, i) => {
     if (i === 0 || i === rows.length - 1 || i % Math.ceil(rows.length / 5) === 0) {
       const x = pad + i * xStep;
-      svg += `<text x="${x}" y="${h-8}" font-size="10" fill="#8a8478" text-anchor="middle">${formatDate(r.date)}</text>`;
+      svg += `<text x="${x}" y="${h-8}" font-size="10" style="fill:var(--muted);" text-anchor="middle">${formatDate(r.date)}</text>`;
     }
   });
   svg += `<line class="scrub-line" x1="0" y1="4" x2="0" y2="${h-16}" stroke="var(--border-input)" stroke-width="1" style="display:none;"/>`;
@@ -502,11 +591,11 @@ function renderCombinedChart() {
   svg += `</svg>`;
 
   const legend = `<div style="display:flex;gap:14px;justify-content:center;margin-top:4px;">
-    ${COMBINED_KEYS.map(k => `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#8a8478;">
+    ${COMBINED_KEYS.map(k => `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);">
       <span style="width:8px;height:8px;border-radius:50%;background:${k.color};display:inline-block;"></span>${k.label}
     </div>`).join("")}
   </div>
-  <div style="font-size:10px;color:#5a564c;text-align:center;margin-top:6px;font-style:italic;">Each line scaled to its own range for comparison &mdash; values shown in history below.</div>`;
+  <div style="font-size:10px;color:var(--muted-faint);text-align:center;margin-top:6px;font-style:italic;">Each line scaled to its own range for comparison &mdash; values shown in history below.</div>`;
 
   document.getElementById("chartWrap").innerHTML = svg + legend + `<div class="chart-tooltip" id="chartTooltip" style="display:none;"></div>`;
 
@@ -639,6 +728,18 @@ function clearForm() {
 }
 
 document.getElementById("cancelEditBtn").addEventListener("click", cancelEdit);
+
+const menuOverlay = document.getElementById("menuOverlay");
+document.getElementById("menuBtn").addEventListener("click", () => { menuOverlay.style.display = "flex"; });
+document.getElementById("menuCloseBtn").addEventListener("click", () => { menuOverlay.style.display = "none"; });
+menuOverlay.addEventListener("click", (e) => { if (e.target === menuOverlay) menuOverlay.style.display = "none"; });
+document.querySelectorAll(".theme-option").forEach(btn => {
+  btn.addEventListener("click", () => setTheme(btn.dataset.theme));
+});
+applyTheme(loadTheme());
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (loadTheme() === "system") applyTheme("system");
+});
 
 document.getElementById("importBtn").addEventListener("click", () => {
   const existingDates = new Set(entries.map(e => e.date));
