@@ -1,5 +1,5 @@
 // Bump this version string whenever app files change, so clients pick up the update.
-const CACHE_NAME = "weight-mgmt-v10";
+const CACHE_NAME = "weight-mgmt-v11";
 
 const PRECACHE_URLS = [
   "./",
@@ -28,24 +28,21 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Cache-first for same-origin GET requests, with a background refresh so the
-// cache stays current on the next load. Falls back to cache if offline.
+// Network-first for same-origin GET requests, so an online launch always gets
+// the latest deployed code immediately. Falls back to cache only when offline.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });
