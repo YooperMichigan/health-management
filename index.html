@@ -405,7 +405,7 @@ function renderSummary() {
   const bmiToGoal = latest && latest.bmi != null ? Math.abs(latest.bmi - GOAL_BMI).toFixed(1) : null;
   const bodyFatToGoal = latest && latest.bodyFat != null ? Math.abs(latest.bodyFat - GOAL_BODY_FAT).toFixed(1) : null;
   const deltaHtml = deltaTagHtml(delta, { firstEntryFallback: true });
-  const totalLostHtml = totalLost === null ? "" : `<div class="delta-tag" style="color:${totalLost >= 0 ? 'var(--green)' : 'var(--red)'};">${Math.abs(totalLost).toFixed(1)} lb ${totalLost >= 0 ? 'lost' : 'gained'} total</div>`;
+  const totalLostHtml = totalLost === null ? "" : `<div class="delta-tag" style="color:${totalLost >= 0 ? 'var(--green)' : 'var(--red)'};">${totalLost >= 0 ? '↓' : '↑'} ${Math.abs(totalLost).toFixed(1)} lb total</div>`;
 
   document.getElementById("summaryRow").innerHTML = `
     <div class="summary-card">
