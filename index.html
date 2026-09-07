@@ -395,18 +395,23 @@ function deltaTagHtml(delta, { firstEntryFallback = false } = {}) {
 function renderSummary() {
   const latest = entries[entries.length - 1];
   const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+  const first = entries[0];
   const delta = latest && prev && latest.weight != null && prev.weight != null ? latest.weight - prev.weight : null;
   const bmiDelta = latest && prev && latest.bmi != null && prev.bmi != null ? latest.bmi - prev.bmi : null;
   const bodyFatDelta = latest && prev && latest.bodyFat != null && prev.bodyFat != null ? latest.bodyFat - prev.bodyFat : null;
+  const totalLost = latest && first && entries.length > 1 && latest.weight != null && first.weight != null
+    ? first.weight - latest.weight : null;
   const toGoal = latest ? Math.abs(latest.weight - GOAL_WEIGHT).toFixed(1) : "–";
   const bmiToGoal = latest && latest.bmi != null ? Math.abs(latest.bmi - GOAL_BMI).toFixed(1) : null;
   const bodyFatToGoal = latest && latest.bodyFat != null ? Math.abs(latest.bodyFat - GOAL_BODY_FAT).toFixed(1) : null;
   const deltaHtml = deltaTagHtml(delta, { firstEntryFallback: true });
+  const totalLostHtml = totalLost === null ? "" : `<div class="delta-tag" style="color:${totalLost >= 0 ? 'var(--green)' : 'var(--red)'};">${Math.abs(totalLost).toFixed(1)} lb ${totalLost >= 0 ? 'lost' : 'gained'} total</div>`;
 
   document.getElementById("summaryRow").innerHTML = `
     <div class="summary-card">
       <div class="summary-label">Latest weight</div>
       <div class="summary-value-row"><span class="summary-value">${latest ? latest.weight : "–"}</span><span class="summary-unit">lb</span></div>
+      ${totalLostHtml}
       ${deltaHtml}
     </div>
     <div class="summary-card">
