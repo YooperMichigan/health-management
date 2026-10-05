@@ -263,15 +263,15 @@
       </div>
       <div class="field-wrap">
         <span class="field-label">Avg steps/day</span>
-        <input type="number" inputmode="numeric" step="1" placeholder="Optional" id="fAvgSteps">
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fAvgSteps">
       </div>
       <div class="field-wrap">
         <span class="field-label">Avg exercise min/day</span>
-        <input type="number" inputmode="numeric" step="1" placeholder="Optional" id="fAvgExercise">
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fAvgExercise">
       </div>
       <div class="field-wrap">
         <span class="field-label">Avg resting HR</span>
-        <input type="number" inputmode="numeric" step="1" placeholder="Optional" id="fAvgRestingHR">
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fAvgRestingHR">
       </div>
       <div class="field-wrap">
         <span class="field-label">VO2 Max</span>
@@ -279,7 +279,15 @@
       </div>
       <div class="field-wrap">
         <span class="field-label">Dose (mg)</span>
-        <input type="number" inputmode="decimal" step="0.5" placeholder="e.g. 7.5" id="fDose">
+        <input type="number" inputmode="decimal" step="0.1" placeholder="e.g. 7.5" id="fDose">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Total Sleep (hours)</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fSleepHours">
+      </div>
+      <div class="field-wrap">
+        <span class="field-label">Wake Up Count</span>
+        <input type="number" inputmode="decimal" step="0.1" placeholder="Optional" id="fWakeUps">
       </div>
     </div>
     <div class="field-wrap">
@@ -511,7 +519,8 @@ function renderChart() {
   svg += `<path d="${pathD}" fill="none" style="stroke:var(--accent);" stroke-width="2"/>`;
   points.forEach(p => { svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" style="fill:var(--accent);"/>`; });
   data.forEach((d, i) => {
-    if (i === 0 || i === data.length - 1 || i % Math.ceil(data.length / 5) === 0) {
+    const tick = Math.ceil(data.length / 5);
+    if (i === 0 || i === data.length - 1 || (i % tick === 0 && data.length - 1 - i >= tick / 2)) {
       svg += `<text x="${points[i][0]}" y="${h-8}" font-size="10" style="fill:var(--muted);" text-anchor="middle">${formatDate(d.date)}</text>`;
     }
   });
@@ -581,7 +590,8 @@ function renderCombinedChart() {
     s.points.forEach(p => { svg += `<circle cx="${p[0]}" cy="${p[1]}" r="2.5" fill="${s.color}"/>`; });
   });
   rows.forEach((r, i) => {
-    if (i === 0 || i === rows.length - 1 || i % Math.ceil(rows.length / 5) === 0) {
+    const tick = Math.ceil(rows.length / 5);
+    if (i === 0 || i === rows.length - 1 || (i % tick === 0 && rows.length - 1 - i >= tick / 2)) {
       const x = pad + i * xStep;
       svg += `<text x="${x}" y="${h-8}" font-size="10" style="fill:var(--muted);" text-anchor="middle">${formatDate(r.date)}</text>`;
     }
@@ -662,6 +672,8 @@ function renderHistory() {
     if (e.avgExercise != null) stats.push(`<span class="history-stat-muted">${e.avgExercise} min/day</span>`);
     if (e.avgRestingHR != null) stats.push(`<span class="history-stat-muted">RHR ${e.avgRestingHR}</span>`);
     if (e.vo2max != null) stats.push(`<span class="history-stat-muted">VO2 ${e.vo2max}</span>`);
+    if (e.sleepHours != null) stats.push(`<span class="history-stat-muted">${e.sleepHours} hr sleep</span>`);
+    if (e.wakeUps != null) stats.push(`<span class="history-stat-muted">${e.wakeUps} wake-ups</span>`);
     return `
       <div class="history-row" data-id="${e.id}">
         <div class="history-date">${formatDate(e.date)}</div>
@@ -711,6 +723,8 @@ function handleEditClick(entry) {
   document.getElementById("fAvgExercise").value = entry.avgExercise ?? "";
   document.getElementById("fAvgRestingHR").value = entry.avgRestingHR ?? "";
   document.getElementById("fVo2max").value = entry.vo2max ?? "";
+  document.getElementById("fSleepHours").value = entry.sleepHours ?? "";
+  document.getElementById("fWakeUps").value = entry.wakeUps ?? "";
   document.getElementById("fNotes").value = entry.notes || "";
   document.getElementById("formError").style.display = "none";
   renderFormHeader();
@@ -724,7 +738,7 @@ function cancelEdit() {
 }
 
 function clearForm() {
-  ["fWeight","fBmi","fBodyFat","fMuscle","fBone","fWater","fDose","fAvgSteps","fAvgExercise","fAvgRestingHR","fVo2max","fNotes"].forEach(id => {
+  ["fWeight","fBmi","fBodyFat","fMuscle","fBone","fWater","fDose","fAvgSteps","fAvgExercise","fAvgRestingHR","fVo2max","fSleepHours","fWakeUps","fNotes"].forEach(id => {
     document.getElementById(id).value = "";
   });
   document.getElementById("fDate").value = todayISO();
@@ -781,10 +795,12 @@ document.getElementById("addBtn").addEventListener("click", () => {
     bone: document.getElementById("fBone").value ? parseFloat(document.getElementById("fBone").value) : null,
     water: document.getElementById("fWater").value ? parseFloat(document.getElementById("fWater").value) : null,
     dose: dose ? `${dose}mg` : null,
-    avgSteps: document.getElementById("fAvgSteps").value ? parseInt(document.getElementById("fAvgSteps").value, 10) : null,
-    avgExercise: document.getElementById("fAvgExercise").value ? parseInt(document.getElementById("fAvgExercise").value, 10) : null,
-    avgRestingHR: document.getElementById("fAvgRestingHR").value ? parseInt(document.getElementById("fAvgRestingHR").value, 10) : null,
+    avgSteps: document.getElementById("fAvgSteps").value ? parseFloat(document.getElementById("fAvgSteps").value) : null,
+    avgExercise: document.getElementById("fAvgExercise").value ? parseFloat(document.getElementById("fAvgExercise").value) : null,
+    avgRestingHR: document.getElementById("fAvgRestingHR").value ? parseFloat(document.getElementById("fAvgRestingHR").value) : null,
     vo2max: document.getElementById("fVo2max").value ? parseFloat(document.getElementById("fVo2max").value) : null,
+    sleepHours: document.getElementById("fSleepHours").value ? parseFloat(document.getElementById("fSleepHours").value) : null,
+    wakeUps: document.getElementById("fWakeUps").value ? parseFloat(document.getElementById("fWakeUps").value) : null,
     notes: document.getElementById("fNotes").value || "",
   };
 
@@ -877,6 +893,8 @@ document.getElementById("importFileInput").addEventListener("change", (ev) => {
           avgExercise: e.avgExercise ?? null,
           avgRestingHR: e.avgRestingHR ?? null,
           vo2max: e.vo2max ?? null,
+          sleepHours: e.sleepHours ?? null,
+          wakeUps: e.wakeUps ?? null,
           notes: e.notes || "",
         });
       });
